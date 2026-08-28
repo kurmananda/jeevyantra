@@ -11,8 +11,7 @@ import ActivityLog from "@/components/admin/ActivityLog";
 import VentureRoadmapManager from "@/components/admin/VentureRoadmapManager";
 import ProjectStatusManager from "@/components/admin/ProjectStatusManager";
 import FeaturedMemberPicker from "@/components/admin/FeaturedMemberPicker";
-
-const ADMIN_PASSWORD = "iamadmin";
+import MemberPasswordReset from "@/components/admin/MemberPasswordReset";
 
 const TABS = [
   { key: "roadmap", label: "Venture X" },
@@ -21,21 +20,34 @@ const TABS = [
   { key: "pitches", label: "Pitches" },
   { key: "bookings", label: "Bookings" },
   { key: "inventory", label: "Inventory" },
+  { key: "members", label: "Pass Reset" },
   { key: "logs", label: "Logs" },
 ];
 
 function PasswordGate({ onUnlock }) {
   const [value, setValue] = useState("");
   const [error, setError] = useState("");
+  const [checking, setChecking] = useState(false);
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
-    if (value === ADMIN_PASSWORD) {
+    setChecking(true);
+    setError("");
+    const res = await fetch("/api/admin-unlock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: value }),
+    });
+    const { ok } = await res.json();
+    setChecking(false);
+    if (ok) {
       onUnlock();
     } else {
       setError("Wrong password.");
     }
   }
+
+  if (checking) return <Servo label="Checking password" />;
 
   return (
     <form onSubmit={submit} className="circuit-card mx-auto max-w-sm p-8 text-center">
@@ -51,6 +63,7 @@ function PasswordGate({ onUnlock }) {
       />
       {error && <p className="mb-3 text-sm text-[var(--led-red)]">{error}</p>}
       <button className="push-btn primary w-full rounded-lg px-4 py-2 text-sm">Unlock</button>
+      <p className="mt-4 text-xs text-muted">Forgot the password? Please contact the club core team.</p>
     </form>
   );
 }
@@ -149,6 +162,14 @@ function AdminDashboard() {
         <section className="flex flex-col gap-3">
           <h2 className="font-display text-xl font-bold uppercase tracking-tight">Inventory</h2>
           <InventoryManager adminId={profile?.id} />
+        </section>
+      )}
+
+      {tab === "members" && (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-display text-xl font-bold uppercase tracking-tight">Password Reset</h2>
+          <p className="-mt-2 text-sm text-muted">Reset a member&apos;s password by their login email if they forget it.</p>
+          <MemberPasswordReset adminId={profile?.id} />
         </section>
       )}
 

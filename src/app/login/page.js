@@ -5,6 +5,106 @@ import { useRouter } from "next/navigation";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import Led from "@/components/Led";
 
+function ForgotPasswordBox({ onReset, onClose }) {
+  const [email, setEmail] = useState("");
+  const [eligible, setEligible] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [checking, setChecking] = useState(false);
+  const [notFound, setNotFound] = useState(false);
+  const [error, setError] = useState("");
+
+  async function check(e) {
+    e.preventDefault();
+    setChecking(true);
+    setNotFound(false);
+    const res = await fetch("/api/claim-reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const body = await res.json();
+    setChecking(false);
+    if (body.ok) {
+      setEligible(true);
+    } else {
+      setNotFound(true);
+    }
+  }
+
+  async function save(e) {
+    e.preventDefault();
+    setChecking(true);
+    setError("");
+    const res = await fetch("/api/complete-reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, newPassword }),
+    });
+    const body = await res.json();
+    setChecking(false);
+    if (!res.ok) {
+      setError(body.error || "Could not set your new password.");
+      return;
+    }
+    onReset(email, newPassword);
+  }
+
+  if (eligible) {
+    return (
+      <form onSubmit={save} className="circuit-card mt-3 flex flex-col gap-2 p-4">
+        <p className="text-xs text-muted">An admin cleared you for a reset — set your new password below.</p>
+        <input
+          type="password"
+          autoFocus
+          className="circuit-card px-3 py-2 text-sm outline-none"
+          placeholder="New password (6+ characters)"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          minLength={6}
+          required
+        />
+        {error && <p className="text-xs text-[var(--led-red)]">{error}</p>}
+        <div className="flex gap-2">
+          <button disabled={checking} className="push-btn primary rounded-lg px-3 py-1.5 text-xs font-bold">
+            {checking ? "Saving..." : "Save password"}
+          </button>
+          <button type="button" onClick={onClose} className="push-btn rounded-lg px-3 py-1.5 text-xs font-bold">
+            Cancel
+          </button>
+        </div>
+      </form>
+    );
+  }
+
+  return (
+    <form onSubmit={check} className="circuit-card mt-3 flex flex-col gap-2 p-4">
+      <p className="text-xs text-muted">Ask an admin to reset it for you, then try your email here.</p>
+      <input
+        type="email"
+        autoFocus
+        className="circuit-card px-3 py-2 text-sm outline-none"
+        placeholder="Your email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        required
+      />
+      {notFound && (
+        <p className="text-xs text-[var(--led-red)]">
+          No reset waiting for that email yet — ask an admin to reset it for you and try again.
+        </p>
+      )}
+      <div className="flex gap-2">
+        <button disabled={checking} className="push-btn primary rounded-lg px-3 py-1.5 text-xs font-bold">
+          {checking ? "Checking..." : "Check"}
+        </button>
+        <button type="button" onClick={onClose} className="push-btn rounded-lg px-3 py-1.5 text-xs font-bold">
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
 export default function LoginPage() {
   const [mode, setMode] = useState("signin");
   const [email, setEmail] = useState("");
@@ -15,6 +115,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [cooldown, setCooldown] = useState(0);
+  const [showForgot, setShowForgot] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -23,11 +124,29 @@ export default function LoginPage() {
     return () => clearInterval(t);
   }, [cooldown]);
 
+  async function signIn(signInEmail, signInPassword) {
+    setLoading(true);
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.auth.signInWithPassword({ email: signInEmail, password: signInPassword });
+    setLoading(false);
+    if (error) {
+      const wait = error.message.match(/after (\d+) seconds?/i);
+      if (wait) {
+        setCooldown(Number(wait[1]));
+        setError(`Too many attempts — please wait a moment before trying again.`);
+      } else {
+        setError(error.message);
+      }
+      return;
+    }
+    router.push("/members/profile");
+    router.refresh();
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const supabase = getSupabaseClient();
 
     if (mode === "signup") {
       const res = await fetch("/api/signup", {
@@ -43,21 +162,15 @@ export default function LoginPage() {
       }
     }
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
     setLoading(false);
-    if (error) {
-      const wait = error.message.match(/after (\d+) seconds?/i);
-      if (wait) {
-        setCooldown(Number(wait[1]));
-        setError(`Too many attempts — please wait a moment before trying again.`);
-      } else {
-        setError(error.message);
-      }
-      return;
-    }
-    router.push("/members/profile");
-    router.refresh();
+    await signIn(email, password);
+  }
+
+  function handleReset(resetEmail, resetPassword) {
+    setShowForgot(false);
+    setEmail(resetEmail);
+    setPassword(resetPassword);
+    signIn(resetEmail, resetPassword);
   }
 
   return (
@@ -145,6 +258,18 @@ export default function LoginPage() {
         >
           {mode === "signin" ? "New here? Create an account" : "Already a member? Sign in"}
         </button>
+
+        {mode === "signin" &&
+          (showForgot ? (
+            <ForgotPasswordBox onReset={handleReset} onClose={() => setShowForgot(false)} />
+          ) : (
+            <button
+              onClick={() => setShowForgot(true)}
+              className="mt-3 w-full text-center text-xs text-muted underline"
+            >
+              Forgot password?
+            </button>
+          ))}
       </div>
     </div>
   );
