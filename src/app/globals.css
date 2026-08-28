@@ -1,0 +1,491 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f4ecd8;
+  --surface: #fffdf8;
+  --foreground: #15130f;
+  --muted: #5b564c;
+  --border: #15130f;
+  --led: #00d17a;
+  --led-strong: #00ff84;
+  --led-amber: #ffb100;
+  --led-red: #ff3b30;
+  --circuit: #d8ccac;
+  --orange: #f97316;
+  --blue: #3b7bff;
+  --yellow: #ffcf33;
+  --shadow: 6px 6px 0 var(--border);
+  --shadow-sm: 4px 4px 0 var(--border);
+  --shadow-lg: 9px 9px 0 var(--border);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-led: var(--led);
+  --color-led-strong: var(--led-strong);
+  --color-led-amber: var(--led-amber);
+  --color-led-red: var(--led-red);
+  --color-orange: var(--orange);
+  --color-blue: var(--blue);
+  --color-yellow: var(--yellow);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-display);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+html {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
+body {
+  background:
+    radial-gradient(circle at 1px 1px, var(--circuit) 1.4px, transparent 0) 0 0 / 22px 22px,
+    var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display), var(--font-sans), sans-serif;
+}
+
+/* ── LED glow primitives ─────────────────────────────────────────────── */
+
+.led-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border);
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+
+.led-dot.on {
+  background: var(--led-strong);
+  box-shadow:
+    0 0 4px 1px var(--led-strong),
+    0 0 14px 4px color-mix(in srgb, var(--led-strong) 55%, transparent);
+}
+
+/* ── realistic LED bulb (bezel + dome + bloom) ──────────────────────── */
+
+.led-bezel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 2px;
+  flex-shrink: 0;
+  background: linear-gradient(155deg, #e4e7ec, #a8adb6);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.7),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.35),
+    0 1px 1px rgba(0, 0, 0, 0.15);
+}
+
+.led-bulb {
+  --led-color: var(--led-strong);
+  flex: 1;
+  border-radius: 999px;
+  background: radial-gradient(circle at 32% 28%, #fcfcfd, #c3c8d0 75%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.8),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.3);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.led-bulb.on {
+  background: radial-gradient(circle at 32% 28%, #ffffff, var(--led-color) 45%, color-mix(in srgb, var(--led-color) 65%, black) 100%);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.9),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.25),
+    0 0 5px 1.5px var(--led-color),
+    0 0 14px 5px color-mix(in srgb, var(--led-color) 65%, transparent),
+    0 0 28px 10px color-mix(in srgb, var(--led-color) 35%, transparent);
+  animation: led-power-on 0.45s ease;
+}
+
+.led-bulb.on.pulse {
+  animation: led-power-on 0.45s ease, led-breathe 2.4s ease-in-out 0.45s infinite;
+}
+
+@keyframes led-power-on {
+  0% {
+    filter: brightness(0.3) saturate(0.6);
+  }
+  35% {
+    filter: brightness(1.8) saturate(1.3);
+  }
+  65% {
+    filter: brightness(0.75);
+  }
+  100% {
+    filter: brightness(1);
+  }
+}
+
+@keyframes led-breathe {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.25);
+  }
+}
+
+/* ── physical lever switch (rotating bar in a slot) ─────────────────── */
+
+.lever-housing {
+  position: relative;
+  display: inline-block;
+  border-radius: 5px;
+  background: linear-gradient(155deg, #eceef1, #c2c7cf);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.7),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.25),
+    0 1px 2px rgba(16, 24, 40, 0.15);
+  flex-shrink: 0;
+}
+
+.lever-track {
+  position: absolute;
+  inset: 3px;
+  border-radius: 3px;
+  background: #10131a;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.lever-pivot {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  transform: translateX(-50%);
+  background: linear-gradient(145deg, #eef0f3, #9aa1ac);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+  z-index: 2;
+}
+
+.lever-bar {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 3.5px;
+  height: 68%;
+  border-radius: 2px;
+  transform-origin: bottom center;
+  transform: translateX(-50%) rotate(-24deg);
+  background: linear-gradient(180deg, #f4f5f7, #9aa1ac);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+  transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s ease, box-shadow 0.3s ease;
+  z-index: 1;
+}
+
+.lever-bar.on {
+  transform: translateX(-50%) rotate(24deg);
+  background: linear-gradient(180deg, #eafff7, var(--led-strong));
+  box-shadow: 0 0 6px 2px var(--led-strong), 0 1px 1px rgba(0, 0, 0, 0.4);
+}
+
+/* mini rocker toggle used inline next to nav labels */
+.mini-toggle {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  width: 24px;
+  height: 13px;
+  border-radius: 999px;
+  background: #d7dbe1;
+  box-shadow: inset 0 1px 3px rgba(16, 24, 40, 0.3), inset 0 -1px 0 rgba(255, 255, 255, 0.4);
+  transition: background 0.28s ease, box-shadow 0.28s ease;
+}
+
+.mini-toggle.on {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--led-strong) 55%, #059669), var(--led-strong));
+  box-shadow:
+    inset 0 1px 3px rgba(0, 60, 40, 0.35),
+    0 0 8px -1px color-mix(in srgb, var(--led-strong) 70%, transparent);
+}
+
+.mini-toggle-knob {
+  position: absolute;
+  top: 1.5px;
+  left: 1.5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(150deg, #ffffff, #c9ced6);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  transition: transform 0.3s cubic-bezier(0.65, 0, 0.35, 1), box-shadow 0.3s ease;
+}
+
+.mini-toggle.on .mini-toggle-knob {
+  transform: translateX(11px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 0 5px 1px rgba(255, 255, 255, 0.7);
+}
+
+/* floating nav shell — bold retro panel, hard shadow, no glass */
+.nav-float {
+  border-radius: 16px;
+  border: 3px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.glow-text {
+  text-shadow: 2px 2px 0 var(--orange);
+}
+
+/* neubrutalist card — flat fill, thick border, hard offset shadow */
+.circuit-card {
+  position: relative;
+  background: var(--surface);
+  border: 3px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.circuit-card:hover {
+  box-shadow: var(--shadow);
+  transform: translate(-2px, -2px);
+}
+
+/* push button — flat color, hard shadow, presses flush on click */
+.push-btn {
+  position: relative;
+  border: 3px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--foreground);
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.push-btn:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: var(--shadow);
+}
+
+.push-btn:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0 var(--border);
+}
+
+.push-btn.primary {
+  background: var(--orange);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+.push-btn.primary:hover {
+  background: var(--yellow);
+}
+
+/* lever switch (nav tabs) */
+.lever-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  color: var(--muted);
+  font-weight: 600;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.lever-tab:hover {
+  color: var(--foreground);
+}
+
+.lever-tab.active {
+  color: var(--foreground);
+}
+
+/* servo spinner */
+.servo-spin {
+  animation: servo-sweep 1.1s cubic-bezier(0.65, 0, 0.35, 1) infinite alternate;
+  transform-origin: 50% 90%;
+}
+
+@keyframes servo-sweep {
+  from {
+    transform: rotate(-35deg);
+  }
+  to {
+    transform: rotate(35deg);
+  }
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  border: 2px solid var(--border);
+  background: var(--surface);
+}
+
+/* ── panel-mount toggle switch (real hardware look) ─────────────────── */
+
+.panel-toggle {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  width: 26px;
+  height: 18px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #f2f3f5 0%, #c7ccd3 42%, #eef0f3 55%, #aab0b9 100%);
+  border: 1px solid #838a94;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.3),
+    0 1px 2px rgba(16, 24, 40, 0.3);
+}
+
+.panel-toggle-screw {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 35%, #ffffff, #6d7480 75%);
+  box-shadow: 0 0.5px 0.5px rgba(0, 0, 0, 0.6);
+  z-index: 2;
+}
+
+.panel-toggle-screw::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2.4px;
+  height: 0.6px;
+  background: #454a52;
+  transform: translate(-50%, -50%) rotate(42deg);
+}
+
+.panel-toggle-screw.tl {
+  top: 1.5px;
+  left: 1.5px;
+}
+
+.panel-toggle-screw.br {
+  bottom: 1.5px;
+  right: 1.5px;
+}
+
+.panel-toggle-socket {
+  position: absolute;
+  inset: 3px;
+  border-radius: 3px;
+  background: radial-gradient(circle at 50% 35%, #262b33, #07090c 75%);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.85), inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+
+.panel-toggle-lever {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  width: 4.5px;
+  height: 11px;
+  border-radius: 2.5px;
+  transform-origin: bottom center;
+  transform: translateX(-50%) rotate(-27deg);
+  background: linear-gradient(180deg, #fcfcfd 0%, #9198a1 55%, #6a7078 100%);
+  box-shadow:
+    0 0.5px 1.5px rgba(0, 0, 0, 0.6),
+    inset 1px 0 0 rgba(255, 255, 255, 0.55),
+    inset -1px 0 0 rgba(0, 0, 0, 0.15);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s ease;
+  z-index: 1;
+}
+
+.panel-toggle-lever::before {
+  content: "";
+  position: absolute;
+  top: -1.75px;
+  left: 50%;
+  width: 4.5px;
+  height: 4.5px;
+  border-radius: 999px;
+  transform: translateX(-50%);
+  background: radial-gradient(circle at 35% 30%, #ffffff, #b7bcc4 75%);
+  box-shadow: 0 0.5px 1px rgba(0, 0, 0, 0.5);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.panel-toggle-lever.on {
+  transform: translateX(-50%) rotate(27deg);
+  background: linear-gradient(180deg, #eafff7 0%, #0fceA0 55%, #059669 100%);
+}
+
+.panel-toggle-lever.on::before {
+  background: radial-gradient(circle at 35% 30%, #ffffff, var(--led-strong) 55%, #00a37c 100%);
+  box-shadow:
+    0 0 3px 1.5px var(--led-strong),
+    0 0 9px 4px color-mix(in srgb, var(--led-strong) 65%, transparent),
+    0 0.5px 1px rgba(0, 0, 0, 0.4);
+}
+
+/* wandering hero robots */
+@keyframes robot-drive {
+  0%, 100% { transform: translateX(-14px); }
+  50% { transform: translateX(14px); }
+}
+
+@keyframes arm-wave {
+  0%, 100% { transform: rotate(-8deg); }
+  50% { transform: rotate(10deg); }
+}
+
+.robot-drive {
+  animation: robot-drive 7s ease-in-out infinite;
+}
+
+.arm-wave {
+  animation: arm-wave 4s ease-in-out infinite;
+  transform-origin: 25% 85%;
+}
+
+@keyframes robot-drive-fast {
+  0%, 100% { transform: translateX(-22px); }
+  50% { transform: translateX(22px); }
+}
+
+@keyframes robot-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.robot-drive-fast {
+  animation: robot-drive-fast 4.5s ease-in-out infinite;
+}
+
+.robot-bob {
+  animation: robot-bob 2.6s ease-in-out infinite;
+}
