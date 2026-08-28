@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import Led from "@/components/Led";
@@ -49,10 +49,27 @@ function ChipLogo() {
   );
 }
 
+function MenuIcon({ open }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      {open ? (
+        <path d="M5 5l14 14M19 5L5 19" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+      ) : (
+        <path
+          d="M4 6h16M4 12h16M4 18h16"
+          stroke="currentColor"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+        />
+      )}
+    </svg>
+  );
+}
+
 export default function Navbar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(undefined);
+  const [menuOpen, setMenuOpen] = useState(false);
   const navRef = useRef(null);
   const tabRefs = useRef({});
   const [indicator, setIndicator] = useState({ left: 0, width: 0, opacity: 0 });
@@ -86,86 +103,40 @@ export default function Navbar() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  async function handleSignOut() {
-    await getSupabaseClient().auth.signOut();
-    router.push("/");
-    router.refresh();
-  }
-
   return (
-    <>
-      <div className="sticky top-3 z-40 px-3 sm:top-4 sm:px-5">
-        <div className="nav-float mx-auto flex max-w-5xl items-center justify-between gap-4 px-3 py-2 sm:px-4">
-          <Link href="/" className="flex items-center gap-2.5 pl-1">
-            <ChipLogo />
-            <span className="hidden flex-col leading-none sm:flex">
-              <span className="font-display text-[15px] font-bold uppercase tracking-tight text-foreground">
-                Jeevyantra
-              </span>
-              <span className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">
-                Robotics Club
-              </span>
+    <div className="sticky top-3 z-40 px-3 sm:top-4 sm:px-5">
+      <div className="nav-float mx-auto flex max-w-5xl items-center justify-between gap-4 px-3 py-2 sm:px-4">
+        <Link href="/" className="flex items-center gap-2.5 pl-1">
+          <ChipLogo />
+          <span className="hidden flex-col leading-none sm:flex">
+            <span className="font-display text-[15px] font-bold uppercase tracking-tight text-foreground">
+              Jeevyantra
             </span>
-          </Link>
+            <span className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-muted">
+              Robotics Club
+            </span>
+          </span>
+        </Link>
 
-          <nav
-            ref={navRef}
-            className="relative hidden items-center gap-0.5 rounded-xl border-2 border-border bg-background p-1 sm:flex"
-          >
-            <span
-              className="absolute top-1 bottom-1 rounded-lg border-2 border-border bg-orange transition-[left,width] duration-200 ease-out"
-              style={{ left: indicator.left, width: indicator.width, opacity: indicator.opacity }}
-            />
-            {TABS.map((tab) => {
-              const active = tab.href === activeHref;
-              return (
-                <Link
-                  key={tab.href}
-                  href={tab.href}
-                  ref={(el) => {
-                    tabRefs.current[tab.href] = el;
-                  }}
-                  className={`relative z-10 flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-[13px] font-medium transition-colors duration-200 ${
-                    active ? "text-foreground" : "text-muted hover:text-foreground"
-                  }`}
-                >
-                  <PanelToggle on={active} />
-                  {tab.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="flex items-center gap-2 pr-0.5">
-            {user ? (
-              <>
-                <Link href="/members/profile" className="push-btn rounded-lg px-3 py-1.5 text-[13px] font-medium">
-                  Profile
-                </Link>
-                <button
-                  onClick={handleSignOut}
-                  className="push-btn rounded-lg px-3 py-1.5 text-[13px] font-medium text-muted"
-                >
-                  Sign out
-                </button>
-              </>
-            ) : (
-              <Link href="/login" className="push-btn primary rounded-lg px-4 py-1.5 text-[13px] font-medium">
-                Sign in
-              </Link>
-            )}
-          </div>
-        </div>
-
-        <nav className="nav-float mx-auto mt-2 flex max-w-5xl items-center gap-1 overflow-x-auto px-2 py-1.5 sm:hidden">
+        <nav
+          ref={navRef}
+          className="relative hidden items-center gap-0.5 rounded-xl border-2 border-border bg-background p-1 sm:flex"
+        >
+          <span
+            className="absolute top-1 bottom-1 rounded-lg border-2 border-border bg-orange transition-[left,width] duration-200 ease-out"
+            style={{ left: indicator.left, width: indicator.width, opacity: indicator.opacity }}
+          />
           {TABS.map((tab) => {
             const active = tab.href === activeHref;
             return (
               <Link
                 key={tab.href}
                 href={tab.href}
-                className={`flex shrink-0 items-center gap-2 rounded-lg border-2 px-3 py-1 text-xs font-bold ${
-                  active ? "border-border bg-orange text-foreground" : "border-transparent text-muted"
+                ref={(el) => {
+                  tabRefs.current[tab.href] = el;
+                }}
+                className={`relative z-10 flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-[13px] font-medium transition-colors duration-200 ${
+                  active ? "text-foreground" : "text-muted hover:text-foreground"
                 }`}
               >
                 <PanelToggle on={active} />
@@ -174,7 +145,78 @@ export default function Navbar() {
             );
           })}
         </nav>
+
+        <div className="hidden items-center gap-2 pr-0.5 sm:flex">
+          {user === undefined ? (
+            <span className="flex h-9 w-20 items-center justify-center">
+              <Led on pulse size={8} />
+            </span>
+          ) : user ? (
+            <Link href="/members/profile" className="push-btn rounded-lg px-3 py-1.5 text-[13px] font-medium">
+              Profile
+            </Link>
+          ) : (
+            <Link href="/login" className="push-btn primary rounded-lg px-4 py-1.5 text-[13px] font-medium">
+              Sign in
+            </Link>
+          )}
+        </div>
+
+        <button
+          onClick={() => setMenuOpen((o) => !o)}
+          aria-label="Toggle menu"
+          aria-expanded={menuOpen}
+          className="push-btn flex h-9 w-9 shrink-0 items-center justify-center rounded-lg sm:hidden"
+        >
+          <MenuIcon open={menuOpen} />
+        </button>
       </div>
-    </>
+
+      {menuOpen && (
+        <nav className="nav-float mx-auto mt-2 flex max-w-5xl flex-col gap-1 p-2 sm:hidden">
+          {TABS.map((tab) => {
+            const active = tab.href === activeHref;
+            return (
+              <Link
+                key={tab.href}
+                href={tab.href}
+                onClick={() => setMenuOpen(false)}
+                className={`flex items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-bold ${
+                  active ? "border-border bg-orange text-foreground" : "border-transparent text-muted"
+                }`}
+              >
+                <PanelToggle on={active} />
+                {tab.label}
+              </Link>
+            );
+          })}
+
+          <div className="my-1 border-t-2 border-dashed border-border" />
+
+          {user === undefined ? (
+            <span className="flex items-center gap-2 px-3 py-2">
+              <Led on pulse size={8} />
+              <span className="text-xs font-bold uppercase tracking-widest text-muted">Checking session...</span>
+            </span>
+          ) : user ? (
+            <Link
+              href="/members/profile"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-2 rounded-lg border-2 border-transparent px-3 py-2 text-sm font-bold text-muted"
+            >
+              Profile
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              onClick={() => setMenuOpen(false)}
+              className="push-btn primary rounded-lg px-3 py-2 text-center text-sm font-bold"
+            >
+              Sign in
+            </Link>
+          )}
+        </nav>
+      )}
+    </div>
   );
 }

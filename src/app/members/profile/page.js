@@ -40,6 +40,12 @@ export default function ProfilePage() {
     });
   }, []);
 
+  async function handleSignOut() {
+    await getSupabaseClient().auth.signOut();
+    router.push("/");
+    router.refresh();
+  }
+
   async function saveProfile(e) {
     e.preventDefault();
     setSavingProfile(true);
@@ -150,9 +156,14 @@ export default function ProfilePage() {
               {profile?.bio && <p className="mt-1 max-w-md text-sm text-muted">{profile.bio}</p>}
             </div>
           </div>
-          <button onClick={() => setEditing(true)} className="push-btn primary w-fit shrink-0 rounded-lg px-4 py-2 text-sm font-medium">
-            Edit my profile
-          </button>
+          <div className="flex shrink-0 gap-2">
+            <button onClick={() => setEditing(true)} className="push-btn primary w-fit rounded-lg px-4 py-2 text-sm font-medium">
+              Edit my profile
+            </button>
+            <button onClick={handleSignOut} className="push-btn w-fit rounded-lg px-4 py-2 text-sm font-medium text-muted">
+              Sign out
+            </button>
+          </div>
         </div>
       )}
 

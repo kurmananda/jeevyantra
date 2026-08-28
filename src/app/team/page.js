@@ -51,9 +51,8 @@ function TeamPage() {
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
       <div>
-        <p className="text-xs font-bold uppercase tracking-widest text-muted">This platform is developed by Kurmananda</p>
+        <p className="text-2xs uppercase tracking-widest text-muted">developed by Kurmananda</p>
         <h1 className="font-display text-3xl font-bold uppercase tracking-tight">Core Team</h1>
-        <p className="text-sm text-muted">The club&apos;s fixed leadership roster.</p>
       </div>
 
       <div className="flex flex-col gap-2">
