@@ -108,7 +108,7 @@ export default function Navbar() {
       <div className="nav-float mx-auto flex max-w-5xl items-center justify-between gap-4 px-3 py-2 sm:px-4">
         <Link href="/" className="flex items-center gap-2.5 pl-1">
           <ChipLogo />
-          <span className="hidden flex-col leading-none sm:flex">
+          <span className="flex flex-col leading-none">
             <span className="font-display text-[15px] font-bold uppercase tracking-tight text-foreground">
               Jeevyantra
             </span>
