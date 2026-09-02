@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import SearchBar from "@/components/SearchBar";
 import StatusPill from "@/components/StatusPill";
@@ -8,14 +9,32 @@ import Servo from "@/components/Servo";
 import RequestTaskModal from "@/components/RequestTaskModal";
 import AuthGate from "@/components/AuthGate";
 
+const FILTERS = [
+  { value: "all", label: "all" },
+  { value: "mine", label: "my tasks" },
+  { value: "current", label: "current" },
+  { value: "previous", label: "completed" },
+];
+
+const STRIPE = {
+  current: "bg-[var(--led-strong)]",
+  previous: "bg-[var(--border)]",
+};
+
 function TaskCard({ task }) {
   return (
-    <div className="circuit-card flex flex-col gap-2 p-5">
-      <h3 className="font-semibold">{task.title}</h3>
-      <p className="text-sm text-muted">{task.description}</p>
-      <p className="mt-1 text-xs font-bold uppercase tracking-widest text-muted">
-        {task.assignee?.name ?? "Unassigned"}
-      </p>
+    <div className="circuit-card flex overflow-hidden">
+      <span className={`w-2 shrink-0 ${STRIPE[task.status] ?? "bg-border"}`} />
+      <div className="flex flex-1 flex-col gap-2 p-5">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-semibold">{task.title}</h3>
+          <StatusPill status={task.status} />
+        </div>
+        <p className="text-sm text-muted">{task.description}</p>
+        <p className="mt-1 text-xs font-bold uppercase tracking-widest text-muted">
+          by {task.profiles?.name ?? "unknown"}
+        </p>
+      </div>
     </div>
   );
 }
@@ -30,42 +49,48 @@ export default function TasksPageGate() {
 
 function TasksPage() {
   const [tasks, setTasks] = useState(null);
-  const [requests, setRequests] = useState([]);
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("all");
   const [showRequest, setShowRequest] = useState(false);
 
-  function loadRequests() {
-    getSupabaseClient()
-      .from("task_requests")
-      .select("*, profiles!task_requests_requested_by_fkey(name), assignee:profiles!task_requests_assignee_id_fkey(name)")
-      .order("created_at", { ascending: false })
-      .then(({ data, error }) => {
-        if (error) {
-          console.warn("task_requests:", error.message);
-          return;
-        }
-        setRequests(data ?? []);
-      });
-  }
-
-  useEffect(() => {
+  function loadTasks() {
     getSupabaseClient()
       .from("tasks")
-      .select("*, assignee:profiles!tasks_assignee_id_fkey(name)")
+      .select("*, profiles!tasks_owner_id_fkey(name)")
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
         if (error) console.warn("tasks:", error.message);
         setTasks(data ?? []);
       });
+  }
 
-    loadRequests();
+  useEffect(() => {
+    const supabase = getSupabaseClient();
+    loadTasks();
+
+    supabase.auth.getSession().then(({ data: sessionData }) => {
+      setCurrentUserId(sessionData.session?.user?.id ?? null);
+    });
   }, []);
 
-  const filtered = (tasks ?? []).filter((t) => {
-    const q = query.toLowerCase();
-    if (!q) return true;
-    return t.title?.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q) || t.assignee?.name?.toLowerCase().includes(q);
-  });
+  const filtered = useMemo(() => {
+    return (tasks ?? [])
+      .filter((t) => {
+        if (filter === "all") return true;
+        if (filter === "mine") return t.owner_id === currentUserId;
+        return t.status === filter;
+      })
+      .filter((t) => {
+        const q = query.toLowerCase();
+        if (!q) return true;
+        return (
+          t.title?.toLowerCase().includes(q) ||
+          t.description?.toLowerCase().includes(q) ||
+          t.profiles?.name?.toLowerCase().includes(q)
+        );
+      });
+  }, [tasks, query, filter, currentUserId]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -73,16 +98,35 @@ function TasksPage() {
         <div>
           <h1 className="font-display text-3xl font-bold uppercase tracking-tight">Tasks</h1>
           <p className="text-sm text-muted">
-            Quick one-off to-dos for one person — not the same as a Project. Projects are builds with a roadmap and
-            a team; Tasks are just: what, why, and who&apos;s on it.
+            Quick one-off to-dos — not the same as a Project. Projects are builds with a roadmap and a team; Tasks
+            are just: what, why, and who&apos;s on it.
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            Looking for a full build instead?{" "}
+            <Link href="/projects" className="font-bold underline decoration-2 underline-offset-2">
+              Projects
+            </Link>
+            .
           </p>
         </div>
         <button onClick={() => setShowRequest(true)} className="push-btn primary rounded-lg px-4 py-2 text-sm">
-          + Suggest a task
+          + Add a task
         </button>
       </div>
 
-      <SearchBar value={query} onChange={setQuery} placeholder="Search tasks by title, description, or assignee..." />
+      <SearchBar value={query} onChange={setQuery} placeholder="Search tasks by title, description, or owner..." />
+
+      <div className="flex gap-1 rounded-xl border-2 border-border bg-surface p-1 w-fit">
+        {FILTERS.map((f) => (
+          <button
+            key={f.value}
+            onClick={() => setFilter(f.value)}
+            className={`lever-tab text-sm capitalize ${filter === f.value ? "active bg-yellow rounded-lg" : ""}`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
 
       {tasks === null ? (
         <Servo label="Loading tasks" />
@@ -96,33 +140,12 @@ function TasksPage() {
         </div>
       )}
 
-      {requests.length > 0 && (
-        <div className="mt-6 flex flex-col gap-3">
-          <h2 className="font-display text-xl font-bold uppercase tracking-tight">Pending task requests</h2>
-          <p className="-mt-2 text-sm text-muted">Suggested tasks waiting on admin approval.</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {requests.map((r) => (
-              <div key={r.id} className="circuit-card p-5">
-                <div className="mb-1 flex items-center justify-between gap-2">
-                  <h3 className="font-bold">{r.title}</h3>
-                  <StatusPill status={r.status} />
-                </div>
-                <p className="text-sm text-muted">{r.description}</p>
-                <p className="mt-2 text-xs font-bold uppercase tracking-widest text-muted">
-                  for {r.assignee?.name ?? "unassigned"} · suggested by {r.profiles?.name ?? "a member"}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {showRequest && (
         <RequestTaskModal
           onClose={() => setShowRequest(false)}
           onSubmitted={() => {
             setShowRequest(false);
-            loadRequests();
+            loadTasks();
           }}
         />
       )}

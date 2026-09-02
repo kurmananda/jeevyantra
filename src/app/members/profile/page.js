@@ -7,27 +7,32 @@ import { getSupabaseClient } from "@/lib/supabaseClient";
 import StatusPill from "@/components/StatusPill";
 import Servo from "@/components/Servo";
 import RequestProjectModal from "@/components/RequestProjectModal";
+import RequestTaskModal from "@/components/RequestTaskModal";
 
 export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState(undefined);
   const [profile, setProfile] = useState(null);
   const [projects, setProjects] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [form, setForm] = useState({ name: "", phone: "", sccode: "", bio: "" });
   const [savingProfile, setSavingProfile] = useState(false);
   const [message, setMessage] = useState("");
   const [editing, setEditing] = useState(false);
   const [showRequest, setShowRequest] = useState(false);
+  const [showTaskRequest, setShowTaskRequest] = useState(false);
 
   async function load(userId) {
     const supabase = getSupabaseClient();
-    const [{ data: p }, { data: pr }] = await Promise.all([
+    const [{ data: p }, { data: pr }, { data: tk }] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", userId).single(),
       supabase.from("projects").select("*").eq("owner_id", userId).order("created_at", { ascending: false }),
+      supabase.from("tasks").select("*").eq("owner_id", userId).order("created_at", { ascending: false }),
     ]);
     if (p) setForm({ name: p.name || "", phone: p.phone || "", sccode: p.sccode || "", bio: p.bio || "" });
     setProfile(p);
     setProjects(pr ?? []);
+    setTasks(tk ?? []);
   }
 
   useEffect(() => {
@@ -192,12 +197,46 @@ export default function ProfilePage() {
         ))}
       </div>
 
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-muted">My tasks</h2>
+          <button
+            onClick={() => setShowTaskRequest(true)}
+            className="push-btn primary rounded-lg px-4 py-2 text-sm font-medium"
+          >
+            + Add a task
+          </button>
+        </div>
+        {tasks.length === 0 && <p className="text-sm text-muted">No tasks yet — add one above.</p>}
+        {tasks.map((t) => (
+          <div key={t.id} className="circuit-card flex items-start justify-between gap-4 p-4">
+            <div>
+              <div className="mb-1 flex items-center gap-2">
+                <h3 className="font-semibold">{t.title}</h3>
+                <StatusPill status={t.status} />
+              </div>
+              <p className="text-sm text-muted">{t.description}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {showRequest && (
         <RequestProjectModal
           onClose={() => setShowRequest(false)}
           onSubmitted={() => {
             setShowRequest(false);
             setMessage("Request submitted — an admin will review it soon.");
+          }}
+        />
+      )}
+
+      {showTaskRequest && (
+        <RequestTaskModal
+          onClose={() => setShowTaskRequest(false)}
+          onSubmitted={() => {
+            setShowTaskRequest(false);
+            if (user) load(user.id);
           }}
         />
       )}

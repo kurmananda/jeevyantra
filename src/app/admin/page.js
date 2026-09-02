@@ -7,7 +7,7 @@ import Servo from "@/components/Servo";
 import BookingApprovals from "@/components/admin/BookingApprovals";
 import InventoryManager from "@/components/admin/InventoryManager";
 import ProjectRequestReview from "@/components/admin/ProjectRequestReview";
-import TaskRequestReview from "@/components/admin/TaskRequestReview";
+import TaskManager from "@/components/admin/TaskManager";
 import ActivityLog from "@/components/admin/ActivityLog";
 import VentureRoadmapManager from "@/components/admin/VentureRoadmapManager";
 import ProjectStatusManager from "@/components/admin/ProjectStatusManager";
@@ -155,9 +155,9 @@ function AdminDashboard() {
 
       {tab === "tasks" && (
         <section className="flex flex-col gap-3">
-          <h2 className="font-display text-xl font-bold uppercase tracking-tight">Task requests</h2>
-          <p className="-mt-2 text-sm text-muted">Approving turns a request into a task on the public Tasks page.</p>
-          <TaskRequestReview adminId={profile?.id} />
+          <h2 className="font-display text-xl font-bold uppercase tracking-tight">Tasks</h2>
+          <p className="-mt-2 text-sm text-muted">Mark a task completed or delete it.</p>
+          <TaskManager adminId={profile?.id} />
         </section>
       )}
 
