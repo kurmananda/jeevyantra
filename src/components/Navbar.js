@@ -75,11 +75,17 @@ export default function Navbar() {
   const tabRefs = useRef({});
   const [indicator, setIndicator] = useState({ left: 0, width: 0, opacity: 0 });
 
-  const activeHref =
-    TABS.find((t) => (t.href === "/" ? pathname === "/" : pathname.startsWith(t.href)))?.href ?? "/";
+  const onProfile = pathname.startsWith("/members/profile");
+  const activeHref = onProfile
+    ? null
+    : TABS.find((t) => (t.href === "/" ? pathname === "/" : pathname.startsWith(t.href)))?.href ?? "/";
 
   useLayoutEffect(() => {
     function measure() {
+      if (!activeHref) {
+        setIndicator((i) => ({ ...i, opacity: 0 }));
+        return;
+      }
       const el = tabRefs.current[activeHref];
       const container = navRef.current;
       if (!el || !container) return;
@@ -153,7 +159,12 @@ export default function Navbar() {
               <Led on pulse size={8} />
             </span>
           ) : user ? (
-            <Link href="/members/profile" className="push-btn rounded-lg px-3 py-1.5 text-[13px] font-medium">
+            <Link
+              href="/members/profile"
+              className={`push-btn profile-glow rounded-lg px-3 py-1.5 text-[13px] font-medium ${
+                onProfile ? "primary" : ""
+              }`}
+            >
               Profile
             </Link>
           ) : (
@@ -203,8 +214,11 @@ export default function Navbar() {
             <Link
               href="/members/profile"
               onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-2 rounded-lg border-2 border-transparent px-3 py-2 text-sm font-bold text-muted"
+              className={`profile-glow flex items-center gap-2 rounded-lg border-2 px-3 py-2 text-sm font-bold ${
+                onProfile ? "border-border bg-orange text-foreground" : "border-transparent text-muted"
+              }`}
             >
+              <PanelToggle on={onProfile} />
               Profile
             </Link>
           ) : (

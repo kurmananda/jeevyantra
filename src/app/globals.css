@@ -254,6 +254,13 @@ h3 {
   text-shadow: 2px 2px 0 var(--orange);
 }
 
+.profile-glow {
+  box-shadow:
+    0 0 6px 1px var(--led-strong),
+    0 0 16px 4px color-mix(in srgb, var(--led-strong) 45%, transparent);
+  animation: led-breathe 2.4s ease-in-out infinite;
+}
+
 /* neubrutalist card — flat fill, thick border, hard offset shadow */
 .circuit-card {
   position: relative;

@@ -98,12 +98,10 @@ function AdminDashboard() {
 
       {!profile?.is_admin && (
         <div className="circuit-card p-4 text-sm" style={{ borderColor: "var(--led-red)" }}>
-          <p className="font-bold text-[var(--led-red)]">You&apos;re not a real admin yet — that&apos;s why nothing shows up.</p>
+          <p className="font-bold text-[var(--led-red)]">You&apos;re not a real admin — that&apos;s why nothing shows up.</p>
           <p className="mt-1 text-muted">
-            The password only unlocks this page in your browser. Every list below (pending bookings, pitches,
-            other members&apos; requests) is filtered by the database itself, and it only shows those to accounts
-            with <code className="font-mono">is_admin = true</code> on their profile. Your account doesn&apos;t
-            have that yet — ask an existing admin to run:
+            The password only unlocked this page in your browser; it isn&apos;t what gates the data. Your account
+            needs <code className="font-mono">is_admin = true</code> on its profile — ask an existing admin to run:
           </p>
           <pre className="mt-2 overflow-x-auto rounded-lg bg-background p-2 text-xs">
             update public.profiles set is_admin = true where id = &apos;{profile?.id ?? "<your-user-id>"}&apos;;
@@ -111,6 +109,8 @@ function AdminDashboard() {
         </div>
       )}
 
+      {!profile?.is_admin ? null : (
+      <>
       <div className="flex flex-wrap gap-1 rounded-xl border-2 border-border bg-surface p-1 w-fit">
         {TABS.map((t) => (
           <button
@@ -188,6 +188,8 @@ function AdminDashboard() {
           <h2 className="font-display text-xl font-bold uppercase tracking-tight">Activity log</h2>
           <ActivityLog />
         </section>
+      )}
+      </>
       )}
     </div>
   );
