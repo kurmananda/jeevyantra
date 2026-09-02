@@ -7,6 +7,7 @@ import Servo from "@/components/Servo";
 import BookingApprovals from "@/components/admin/BookingApprovals";
 import InventoryManager from "@/components/admin/InventoryManager";
 import ProjectRequestReview from "@/components/admin/ProjectRequestReview";
+import TaskRequestReview from "@/components/admin/TaskRequestReview";
 import ActivityLog from "@/components/admin/ActivityLog";
 import VentureRoadmapManager from "@/components/admin/VentureRoadmapManager";
 import ProjectStatusManager from "@/components/admin/ProjectStatusManager";
@@ -18,6 +19,7 @@ const TABS = [
   { key: "projects", label: "Projects" },
   { key: "spotlight", label: "Spotlight" },
   { key: "pitches", label: "Pitches" },
+  { key: "tasks", label: "Tasks" },
   { key: "bookings", label: "Bookings" },
   { key: "inventory", label: "Inventory" },
   { key: "members", label: "Pass Reset" },
@@ -148,6 +150,14 @@ function AdminDashboard() {
         <section className="flex flex-col gap-3">
           <h2 className="font-display text-xl font-bold uppercase tracking-tight">Project pitches</h2>
           <ProjectRequestReview adminId={profile?.id} />
+        </section>
+      )}
+
+      {tab === "tasks" && (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-display text-xl font-bold uppercase tracking-tight">Task requests</h2>
+          <p className="-mt-2 text-sm text-muted">Approving turns a request into a task on the public Tasks page.</p>
+          <TaskRequestReview adminId={profile?.id} />
         </section>
       )}
 

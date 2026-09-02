@@ -145,6 +145,13 @@ function ProjectsPage() {
         <div>
           <h1 className="font-display text-3xl font-bold uppercase tracking-tight">Projects</h1>
           <p className="text-sm text-muted">Every build the club has fired up — powered on, wired up, or archived.</p>
+          <p className="mt-1 text-xs text-muted">
+            Looking for a quick one-person to-do instead of a full build? That&apos;s{" "}
+            <Link href="/tasks" className="font-bold underline decoration-2 underline-offset-2">
+              Tasks
+            </Link>
+            .
+          </p>
         </div>
         <button onClick={() => setShowRequest(true)} className="push-btn primary rounded-lg px-4 py-2 text-sm">
           + Request a project

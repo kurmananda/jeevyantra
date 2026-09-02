@@ -12,7 +12,6 @@ function isOverdue(booking) {
 export default function BookingApprovals({ adminId }) {
   const [pending, setPending] = useState(null);
   const [active, setActive] = useState(null);
-  const [drafts, setDrafts] = useState({});
   const [userQuery, setUserQuery] = useState("");
 
   function load() {
@@ -38,19 +37,30 @@ export default function BookingApprovals({ adminId }) {
 
   async function act(booking, status) {
     const supabase = getSupabaseClient();
-    const pickup_time = drafts[booking.id]?.pickup_time || null;
     const approved_at = status === "approved" ? new Date().toISOString() : null;
     await supabase
       .from("bookings")
       .update({
         status,
         assigned_by: adminId,
-        pickup_time: status === "approved" ? pickup_time : null,
         approved_at,
       })
       .eq("id", booking.id);
+    if (status === "approved") {
+      const { data: item } = await supabase
+        .from("inventory_items")
+        .select("available_quantity")
+        .eq("id", booking.item_id)
+        .single();
+      if (item) {
+        await supabase
+          .from("inventory_items")
+          .update({ available_quantity: Math.max(0, item.available_quantity - booking.quantity) })
+          .eq("id", booking.item_id);
+      }
+    }
     setPending((p) => p.filter((b) => b.id !== booking.id));
-    if (status === "approved") setActive((a) => [...a, { ...booking, status, assigned_by: adminId, pickup_time, approved_at }]);
+    if (status === "approved") setActive((a) => [...a, { ...booking, status, assigned_by: adminId, approved_at }]);
     await logActivity(
       supabase,
       adminId,
@@ -115,16 +125,6 @@ export default function BookingApprovals({ adminId }) {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <input
-                  type="datetime-local"
-                  className="circuit-card px-2 py-1.5 text-xs outline-none"
-                  onChange={(e) =>
-                    setDrafts((d) => ({
-                      ...d,
-                      [b.id]: { pickup_time: e.target.value ? new Date(e.target.value).toISOString() : null },
-                    }))
-                  }
-                />
                 <ConfirmButton
                   label="Approve"
                   question={`Approve ${b.inventory_items?.name} for ${b.profiles?.name}?`}

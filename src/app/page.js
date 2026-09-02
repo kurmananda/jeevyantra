@@ -11,9 +11,9 @@ import ArmIcon from "@/components/ArmIcon";
 import QuadrupedIcon from "@/components/QuadrupedIcon";
 import VentureBanner from "@/components/VentureBanner";
 
-function StatTile({ label, value, accent = "led-strong" }) {
-  return (
-    <div className="circuit-card flex items-center justify-between gap-3 px-5 py-4">
+function StatTile({ label, value, accent = "led-strong", href }) {
+  const content = (
+    <>
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">{label}</p>
         <p className="mt-1 font-mono text-2xl font-bold tabular-nums text-foreground">
@@ -21,8 +21,18 @@ function StatTile({ label, value, accent = "led-strong" }) {
         </p>
       </div>
       <Led on={value !== null} color={accent} pulse={value !== null} size={9} />
-    </div>
+    </>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="circuit-card flex items-center justify-between gap-3 px-5 py-4 transition-transform hover:-translate-y-0.5">
+        {content}
+      </Link>
+    );
+  }
+
+  return <div className="circuit-card flex items-center justify-between gap-3 px-5 py-4">{content}</div>;
 }
 
 function NavTile({ href, label }) {
@@ -176,9 +186,9 @@ export default function HomePage() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-4">
-        <StatTile label="Members" value={stats.members} accent="led-strong" />
-        <StatTile label="Active builds" value={stats.activeProjects} accent="led-strong" />
-        <StatTile label="Inventory SKUs" value={stats.inventory} accent="led" />
+        <StatTile label="Members" value={stats.members} accent="led-strong" href="/members" />
+        <StatTile label="Active builds" value={stats.activeProjects} accent="led-strong" href="/projects" />
+        <StatTile label="Inventory SKUs" value={stats.inventory} accent="led" href="/inventory" />
         <StatTile label="Pending bookings" value={stats.pending} accent="led-amber" />
       </div>
 

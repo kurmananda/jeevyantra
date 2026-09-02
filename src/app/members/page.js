@@ -26,6 +26,8 @@ function MemberCard({ member }) {
             <p className="font-semibold">{member.name}</p>
             <p className="text-xs text-muted">
               {member.projects?.length ?? 0} {member.projects?.length === 1 ? "project" : "projects"}
+              {" · "}
+              {member.borrowed?.length ?? 0} borrowed
             </p>
           </div>
         </div>
@@ -58,6 +60,24 @@ function MemberCard({ member }) {
               ))}
             </div>
           )}
+
+          <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-widest text-muted">Borrowed items</p>
+          {!member.borrowed?.length ? (
+            <p className="text-sm text-muted">Nothing currently borrowed.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {member.borrowed.map((b) => (
+                <div key={b.id} className="flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2">
+                  <p className="text-sm font-medium">
+                    {b.inventory_items?.name} × {b.quantity}
+                  </p>
+                  {b.return_by && (
+                    <span className="text-xs text-muted">Due {new Date(b.return_by).toLocaleDateString()}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -78,18 +98,29 @@ function MembersPage() {
 
   useEffect(() => {
     const supabase = getSupabaseClient();
-    Promise.all([supabase.from("profiles").select("*"), supabase.from("projects").select("*")]).then(
-      ([{ data: profiles }, { data: projects }]) => {
-        const byOwner = {};
-        (projects ?? []).forEach((p) => {
-          byOwner[p.owner_id] = byOwner[p.owner_id] || [];
-          byOwner[p.owner_id].push(p);
-        });
-        const withProjects = (profiles ?? []).map((m) => ({ ...m, projects: byOwner[m.id] || [] }));
-        withProjects.sort((a, b) => b.projects.length - a.projects.length);
-        setMembers(withProjects);
-      }
-    );
+    Promise.all([
+      supabase.from("profiles").select("*"),
+      supabase.from("projects").select("*"),
+      supabase.from("bookings").select("*, inventory_items(name)").eq("status", "approved"),
+    ]).then(([{ data: profiles }, { data: projects }, { data: bookings }]) => {
+      const byOwner = {};
+      (projects ?? []).forEach((p) => {
+        byOwner[p.owner_id] = byOwner[p.owner_id] || [];
+        byOwner[p.owner_id].push(p);
+      });
+      const byBorrower = {};
+      (bookings ?? []).forEach((b) => {
+        byBorrower[b.user_id] = byBorrower[b.user_id] || [];
+        byBorrower[b.user_id].push(b);
+      });
+      const withProjects = (profiles ?? []).map((m) => ({
+        ...m,
+        projects: byOwner[m.id] || [],
+        borrowed: byBorrower[m.id] || [],
+      }));
+      withProjects.sort((a, b) => b.projects.length - a.projects.length);
+      setMembers(withProjects);
+    });
   }, []);
 
   const filtered = useMemo(() => {

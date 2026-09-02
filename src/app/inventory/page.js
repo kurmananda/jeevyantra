@@ -26,11 +26,21 @@ function BookModal({ item, onClose, onBooked }) {
       setSaving(false);
       return;
     }
+    if (!returnBy) {
+      setError("Pick a return date.");
+      setSaving(false);
+      return;
+    }
+    if (!notes.trim()) {
+      setError("Tell us what it's for.");
+      setSaving(false);
+      return;
+    }
     const { error } = await supabase.from("bookings").insert({
       item_id: item.id,
       user_id: userId,
       quantity,
-      notes,
+      notes: notes.trim(),
       return_by: returnBy ? new Date(returnBy).toISOString() : null,
     });
     setSaving(false);
@@ -66,18 +76,21 @@ function BookModal({ item, onClose, onBooked }) {
             +
           </button>
         </div>
-        <label className="mb-1 block text-xs font-medium text-muted">When will you return it?</label>
+        <label className="mb-1 block text-xs font-medium text-muted">When will you return it? *</label>
         <input
           type="date"
+          required
+          min={new Date().toISOString().slice(0, 10)}
           value={returnBy}
           onChange={(e) => setReturnBy(e.target.value)}
           className="circuit-card mb-3 w-full px-3 py-2 text-sm outline-none"
         />
-        <label className="mb-1 block text-xs font-medium text-muted">Notes (what for)</label>
+        <label className="mb-1 block text-xs font-medium text-muted">Notes (what for) *</label>
         <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           rows={3}
+          required
           className="circuit-card mb-3 w-full px-3 py-2 text-sm outline-none"
           placeholder="e.g. Needed for line-follower demo"
         />
@@ -99,8 +112,11 @@ function isOverdue(returnBy) {
   return Boolean(returnBy) && new Date(returnBy).getTime() < Date.now();
 }
 
+const BOOKINGS_PAGE_SIZE = 2;
+
 function MyBookings({ userId, refreshKey }) {
   const [bookings, setBookings] = useState(null);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -114,28 +130,40 @@ function MyBookings({ userId, refreshKey }) {
 
   if (!userId || !bookings?.length) return null;
 
+  const visible = expanded ? bookings : bookings.slice(0, BOOKINGS_PAGE_SIZE);
+
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="text-sm font-semibold uppercase tracking-widest text-muted">My bookings</h2>
-      {bookings.map((b) => (
-        <div key={b.id} className="circuit-card flex flex-wrap items-center justify-between gap-3 p-4">
-          <div>
-            <p className="font-medium">{b.inventory_items?.name} × {b.quantity}</p>
-            <p className="text-xs text-muted">{b.notes}</p>
-            {b.status === "approved" && (
-              <p className="mt-1 text-xs text-muted">
-                Assigned by {b.assigned?.name ?? "—"} · Pickup:{" "}
-                {b.pickup_time ? new Date(b.pickup_time).toLocaleString() : "TBD"}
-                {b.return_by && <> · Return by: {new Date(b.return_by).toLocaleDateString()}</>}
-                {isOverdue(b.return_by) && (
-                  <span className="ml-2 status-pill normal-case text-[var(--led-red)]">Delayed</span>
-                )}
-              </p>
-            )}
+      <h2 className="text-sm font-semibold uppercase tracking-widest text-muted">My bookings history</h2>
+      <div className="flex flex-col gap-3">
+        {visible.map((b) => (
+          <div key={b.id} className="circuit-card flex flex-wrap items-center justify-between gap-3 p-4">
+            <div>
+              <p className="font-medium">{b.inventory_items?.name} × {b.quantity}</p>
+              <p className="text-xs text-muted">{b.notes}</p>
+              {b.status === "approved" && (
+                <p className="mt-1 text-xs text-muted">
+                  Assigned by {b.assigned?.name ?? "—"}
+                  {b.return_by && <> · Return by: {new Date(b.return_by).toLocaleDateString()}</>}
+                  {isOverdue(b.return_by) && (
+                    <span className="ml-2 status-pill normal-case text-[var(--led-red)]">Delayed</span>
+                  )}
+                </p>
+              )}
+            </div>
+            <StatusPill status={b.status} />
           </div>
-          <StatusPill status={b.status} />
-        </div>
-      ))}
+        ))}
+      </div>
+      {bookings.length > BOOKINGS_PAGE_SIZE && (
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          className="push-btn self-start rounded-lg px-4 py-1.5 text-xs font-medium"
+        >
+          {expanded ? "Show less" : `Show all (${bookings.length})`}
+        </button>
+      )}
     </div>
   );
 }
@@ -172,11 +200,15 @@ function InventoryPage() {
       .eq("status", "approved")
       .then(({ data }) => {
         const map = {};
+        const nameCounts = {};
         (data ?? []).forEach((b) => {
+          if (!b.profiles?.name) return;
+          const key = `${b.item_id}:${b.profiles.name}`;
+          const count = (nameCounts[key] ?? 0) + 1;
+          nameCounts[key] = count;
+          if (count > 2) return; // same borrower's name repeats at most twice per item
           map[b.item_id] = map[b.item_id] || [];
-          if (b.profiles?.name) {
-            map[b.item_id].push({ name: b.profiles.name, approved_at: b.approved_at, return_by: b.return_by });
-          }
+          map[b.item_id].push({ name: b.profiles.name, approved_at: b.approved_at, return_by: b.return_by });
         });
         setLentTo(map);
       });
@@ -219,10 +251,12 @@ function InventoryPage() {
 
       <SearchBar value={query} onChange={setQuery} placeholder="Search inventory by name or category..." />
 
+      {!query.trim() && <MyBookings userId={user?.id} refreshKey={refreshKey} />}
+
       {items === null ? (
         <Servo label="Scanning shelves" />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((item) => {
             const pending = pendingByItem[item.id] ?? 0;
             const effective = Math.max(0, item.available_quantity - pending);
@@ -234,18 +268,19 @@ function InventoryPage() {
                   <span className="status-pill text-muted">{item.category ?? "misc"}</span>
                 </div>
                 <p className="text-sm text-muted">{item.description}</p>
+                {item.link && (
+                  <a
+                    href={item.link}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-bold underline decoration-2 underline-offset-2"
+                  >
+                    View link
+                  </a>
+                )}
 
                 <div className="text-xs text-muted">
-                  {pending > 0 ? (
-                    <>
-                      <span className="line-through opacity-60">{item.available_quantity}</span>{" "}
-                      <span className="font-bold text-foreground">{effective}</span> / {item.quantity} available
-                    </>
-                  ) : (
-                    <>
-                      {item.available_quantity} / {item.quantity} available
-                    </>
-                  )}
+                  <span className="font-bold text-foreground">{item.available_quantity}</span> / {item.quantity} available
                   {item.available_quantity <= 0 && (
                     <span className="ml-2 status-pill normal-case text-[var(--led-amber)]">Complete</span>
                   )}
@@ -288,7 +323,6 @@ function InventoryPage() {
         </div>
       )}
 
-      <MyBookings userId={user?.id} refreshKey={refreshKey} />
       {isAdmin && (
         <p className="text-xs text-muted">
           Approving bookings has moved to the{" "}

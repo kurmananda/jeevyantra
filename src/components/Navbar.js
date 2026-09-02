@@ -10,6 +10,7 @@ import PanelToggle from "@/components/PanelToggle";
 const TABS = [
   { href: "/", label: "Home" },
   { href: "/projects", label: "Projects" },
+  { href: "/tasks", label: "Tasks" },
   { href: "/members", label: "Members" },
   { href: "/inventory", label: "Inventory" },
 ];
