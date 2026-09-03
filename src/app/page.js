@@ -14,25 +14,23 @@ import VentureBanner from "@/components/VentureBanner";
 function StatTile({ label, value, accent = "led-strong", href }) {
   const content = (
     <>
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted">{label}</p>
-        <p className="mt-1 font-mono text-2xl font-bold tabular-nums text-foreground">
-          {value === null ? "—" : String(value).padStart(2, "0")}
-        </p>
-      </div>
-      <Led on={value !== null} color={accent} pulse={value !== null} size={9} />
+      <Led className="absolute top-3 right-3" on={value !== null} color={accent} pulse={value !== null} size={9} />
+      <p className="font-mono text-3xl font-bold tabular-nums text-foreground">
+        {value === null ? "—" : String(value).padStart(2, "0")}
+      </p>
+      <p className="mt-1 text-[11px] font-semibold uppercase tracking-widest text-muted">{label}</p>
     </>
   );
 
   if (href) {
     return (
-      <Link href={href} className="circuit-card flex items-center justify-between gap-3 px-5 py-4 transition-transform hover:-translate-y-0.5">
+      <Link href={href} className="circuit-card relative flex flex-col items-center px-5 py-5 text-center transition-transform hover:-translate-y-0.5">
         {content}
       </Link>
     );
   }
 
-  return <div className="circuit-card flex items-center justify-between gap-3 px-5 py-4">{content}</div>;
+  return <div className="circuit-card relative flex flex-col items-center px-5 py-5 text-center">{content}</div>;
 }
 
 function NavTile({ href, label }) {
@@ -63,37 +61,46 @@ function ProjectRow({ project }) {
   );
 }
 
-function MemberSpotlight({ title, member, accent }) {
-  if (!member) return null;
+function Leaderboard({ title, members, accent }) {
+  const filled = members.filter(Boolean);
+  if (!filled.length) return null;
   return (
-    <div className="circuit-card p-5">
-      <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">{title}</p>
-      <div className="flex items-center gap-3">
-        <div
-          className="flex h-12 w-12 items-center justify-center rounded-full border border-border text-lg font-semibold"
-          style={{ boxShadow: `0 0 0 3px color-mix(in srgb, ${accent} 20%, transparent)` }}
-        >
-          {member.name?.[0]?.toUpperCase() ?? "?"}
-        </div>
-        <div>
-          <p className="font-semibold">{member.name}</p>
-          <p className="text-xs text-muted">
-            {member.projectCount ?? 0} {member.projectCount === 1 ? "project" : "projects"}
-          </p>
-        </div>
+    <div className="circuit-card flex items-center gap-4 p-5">
+      <p
+        className="shrink-0 whitespace-nowrap text-base font-semibold uppercase tracking-widest text-muted"
+        style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+      >
+        {title}
+      </p>
+      <div className="flex flex-1 flex-col gap-3">
+        {members.map(
+          (member, i) =>
+            member && (
+              <Link
+                key={member.id ?? i}
+                href="/members"
+                className="flex items-center gap-3 transition-transform hover:-translate-y-0.5"
+              >
+                <span className="w-4 text-sm font-bold text-muted">{i + 1}</span>
+                <div
+                  className="flex h-12 w-12 items-center justify-center rounded-full border border-border text-lg font-semibold"
+                  style={{ boxShadow: `0 0 0 3px color-mix(in srgb, ${accent} 20%, transparent)` }}
+                >
+                  {member.name?.[0]?.toUpperCase() ?? "?"}
+                </div>
+                <p className="text-lg font-semibold">{member.name}</p>
+              </Link>
+            )
+        )}
       </div>
-      <Link href="/members" className="push-btn mt-4 inline-block rounded-lg px-3 py-1.5 text-xs font-medium">
-        View members
-      </Link>
     </div>
   );
 }
 
 export default function HomePage() {
   const [projects, setProjects] = useState(null);
-  const [topMember, setTopMember] = useState(null);
-  const [randomMember, setRandomMember] = useState(null);
-  const [spotlightTitle, setSpotlightTitle] = useState("Member spotlight");
+  const [leaderboardTitle, setLeaderboardTitle] = useState("Leaderboard");
+  const [leaderboardMembers, setLeaderboardMembers] = useState([]);
   const [stats, setStats] = useState({ members: null, activeProjects: null, inventory: null, pending: null });
 
   useEffect(() => {
@@ -105,31 +112,17 @@ export default function HomePage() {
       .order("created_at", { ascending: false })
       .then(({ data }) => setProjects(data ?? []));
 
-    Promise.all([supabase.from("profiles").select("*"), supabase.from("projects").select("id, owner_id")]).then(
-      ([{ data: allProfiles }, { data: allProjects }]) => {
-        if (!allProfiles?.length) return;
-        const counts = {};
-        (allProjects ?? []).forEach((p) => {
-          counts[p.owner_id] = (counts[p.owner_id] ?? 0) + 1;
-        });
-        const withCounts = allProfiles.map((p) => ({ ...p, projectCount: counts[p.id] ?? 0 }));
-        const mostProjects = [...withCounts].sort((a, b) => b.projectCount - a.projectCount)[0];
-        setTopMember(mostProjects ?? null);
-
-        supabase
-          .from("app_settings")
-          .select("featured_member_id, featured_title")
-          .eq("id", true)
-          .maybeSingle()
-          .then(({ data: settings }) => {
-            const featured = settings?.featured_member_id
-              ? withCounts.find((p) => p.id === settings.featured_member_id)
-              : null;
-            setRandomMember(featured ?? withCounts[Math.floor(Math.random() * withCounts.length)]);
-            if (settings?.featured_title) setSpotlightTitle(settings.featured_title);
-          });
-      }
-    );
+    supabase
+      .from("app_settings")
+      .select(
+        "featured_title, m1:profiles!featured_member_id(id, name), m2:profiles!featured_member_id_2(id, name), m3:profiles!featured_member_id_3(id, name)"
+      )
+      .eq("id", true)
+      .maybeSingle()
+      .then(({ data: settings }) => {
+        if (settings?.featured_title) setLeaderboardTitle(settings.featured_title);
+        setLeaderboardMembers([settings?.m1 ?? null, settings?.m2 ?? null, settings?.m3 ?? null]);
+      });
 
     Promise.all([
       supabase.from("profiles").select("*", { count: "exact", head: true }),
@@ -185,16 +178,14 @@ export default function HomePage() {
         <NavTile href="/admin" label="Admin" />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-4">
-        <StatTile label="Members" value={stats.members} accent="led-strong" href="/members" />
-        <StatTile label="Active builds" value={stats.activeProjects} accent="led-strong" href="/projects" />
-        <StatTile label="Inventory SKUs" value={stats.inventory} accent="led" href="/inventory" />
-        <StatTile label="Pending bookings" value={stats.pending} accent="led-amber" />
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <MemberSpotlight title="Most projects" member={topMember} accent="var(--led-strong)" />
-        <MemberSpotlight title={spotlightTitle} member={randomMember} accent="var(--led-amber)" />
+      <div className="grid items-stretch gap-4 lg:grid-cols-2">
+        <div className="grid h-full grid-cols-2 content-center gap-3">
+          <StatTile label="Members" value={stats.members} accent="led-strong" href="/members" />
+          <StatTile label="Active builds" value={stats.activeProjects} accent="led-strong" href="/projects" />
+          <StatTile label="Inventory SKUs" value={stats.inventory} accent="led" href="/inventory" />
+          <StatTile label="Pending bookings" value={stats.pending} accent="led-amber" />
+        </div>
+        <Leaderboard title={leaderboardTitle} members={leaderboardMembers} accent="var(--led-strong)" />
       </div>
 
       <VentureBanner />
