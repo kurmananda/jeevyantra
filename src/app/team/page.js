@@ -39,7 +39,7 @@ function MemberRow({ position, name, phone }) {
         target="_blank"
         rel="noreferrer"
         aria-label={`Message ${name} on WhatsApp`}
-        className="push-btn flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--led-strong)]"
+        className="push-btn flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-[var(--led-strong-text)]"
       >
         <WhatsAppIcon />
       </a>

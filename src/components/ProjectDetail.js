@@ -8,6 +8,7 @@ import Servo from "@/components/Servo";
 import Roadmap from "@/components/Roadmap";
 import AddProgressModal from "@/components/AddProgressModal";
 import AddTeammateModal from "@/components/AddTeammateModal";
+import ConfirmButton from "@/components/admin/ConfirmButton";
 import { buildByline, waLink } from "@/lib/team";
 
 const STRIPE = {
@@ -82,6 +83,12 @@ export default function ProjectDetail({ id }) {
     setProgress((p) => p.filter((x) => x.id !== entry.id));
   }
 
+  async function removeTeammate(member) {
+    const supabase = getSupabaseClient();
+    await supabase.from("project_teams").delete().eq("project_id", id).eq("user_id", member.id);
+    setTeam((t) => t.filter((x) => x.id !== member.id));
+  }
+
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6">
       <Link href="/projects" className="w-fit text-sm font-bold text-muted underline decoration-2 underline-offset-2">
@@ -151,16 +158,26 @@ export default function ProjectDetail({ id }) {
                 <span className="text-sm font-bold">
                   {m.name} {i === 0 && <span className="text-xs font-semibold text-muted">(owner)</span>}
                 </span>
-                {m.phone && waLink(m.phone) && (
-                  <a
-                    href={waLink(m.phone)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs font-bold text-[var(--led-strong)] underline decoration-2 underline-offset-2"
-                  >
-                    {m.phone} ↗
-                  </a>
-                )}
+                <div className="flex items-center gap-3">
+                  {m.phone && waLink(m.phone) && (
+                    <a
+                      href={waLink(m.phone)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-bold text-[var(--led-strong-text)] underline decoration-2 underline-offset-2"
+                    >
+                      {m.phone} ↗
+                    </a>
+                  )}
+                  {i !== 0 && canManageTeam && project.status === "current" && (
+                    <ConfirmButton
+                      label="Remove"
+                      question={`Remove ${m.name} from this project?`}
+                      danger
+                      onConfirm={() => removeTeammate(m)}
+                    />
+                  )}
+                </div>
               </div>
             ))}
           </div>

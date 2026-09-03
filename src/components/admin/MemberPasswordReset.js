@@ -129,7 +129,7 @@ export default function MemberPasswordReset({ adminId }) {
       )}
 
       {error && <p className="text-sm text-[var(--led-red)]">{error}</p>}
-      {message && <p className="text-sm text-[var(--led-strong)]">{message}</p>}
+      {message && <p className="text-sm text-[var(--led-strong-text)]">{message}</p>}
     </div>
   );
 }

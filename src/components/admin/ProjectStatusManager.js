@@ -29,6 +29,13 @@ export default function ProjectStatusManager({ adminId }) {
     await logActivity(supabase, adminId, "project marked completed", `${project.title} (by ${project.profiles?.name ?? "member"})`);
   }
 
+  async function deleteProject(project) {
+    const supabase = getSupabaseClient();
+    await supabase.from("projects").delete().eq("id", project.id);
+    setProjects((p) => p.filter((x) => x.id !== project.id));
+    await logActivity(supabase, adminId, "project deleted", `${project.title} (by ${project.profiles?.name ?? "member"})`);
+  }
+
   if (projects === null) return null;
   if (!projects.length) return <p className="text-sm text-muted">No current projects to close out.</p>;
 
@@ -40,12 +47,20 @@ export default function ProjectStatusManager({ adminId }) {
             <p className="font-bold">{p.title}</p>
             <p className="text-xs font-bold uppercase tracking-widest text-muted">by {p.profiles?.name ?? "unknown"}</p>
           </div>
-          <ConfirmButton
-            label="Mark completed"
-            question={`Mark "${p.title}" completed?`}
-            primary
-            onConfirm={() => markCompleted(p)}
-          />
+          <div className="flex gap-2">
+            <ConfirmButton
+              label="Mark completed"
+              question={`Mark "${p.title}" completed?`}
+              primary
+              onConfirm={() => markCompleted(p)}
+            />
+            <ConfirmButton
+              label="Delete"
+              question={`Delete "${p.title}"? This can't be undone.`}
+              danger
+              onConfirm={() => deleteProject(p)}
+            />
+          </div>
         </div>
       ))}
     </div>

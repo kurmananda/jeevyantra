@@ -76,6 +76,7 @@ function ProjectsPage() {
     getSupabaseClient()
       .from("project_requests")
       .select("*, profiles!project_requests_requested_by_fkey(name)")
+      .eq("status", "requested")
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
         if (error) {
