@@ -54,7 +54,7 @@ function MemberDetailModal({ member, onClose }) {
         </div>
 
         {member.bio && <p className="mb-3 text-sm text-muted">{member.bio}</p>}
-        <div className="mb-3 grid grid-cols-2 gap-2 text-xs text-muted sm:grid-cols-3">
+        <div className="mb-3 flex flex-col gap-1 text-xs text-muted">
           <span>Email: {member.email || "—"}</span>
           <span>Phone: {member.phone || "—"}</span>
           <span>SC code: {member.sccode || "—"}</span>
@@ -125,7 +125,6 @@ function MemberCard({ member, onOpen }) {
         </div>
         <div>
           <p className="font-semibold">{member.name}</p>
-          {member.email && <p className="text-xs text-muted">{member.email}</p>}
           <p className="text-xs text-muted">
             {member.projects?.length ?? 0} {member.projects?.length === 1 ? "project" : "projects"}
             {" · "}
