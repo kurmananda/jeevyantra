@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { getSupabaseClient } from "@/lib/supabaseClient";
 import { logActivity } from "@/lib/activityLog";
 import ConfirmButton from "@/components/admin/ConfirmButton";
@@ -9,27 +9,27 @@ export default function MemberPasswordReset({ adminId }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [searched, setSearched] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  async function runSearch() {
     const q = query.trim();
     if (q.length < 2) return;
-    let cancelled = false;
-    (async () => {
-      const supabase = getSupabaseClient();
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      const res = await fetch(`/api/admin-search-members?q=${encodeURIComponent(q)}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const body = await res.json();
-      if (!cancelled) setResults(body.results ?? []);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [query]);
+    setSearching(true);
+    setError("");
+    const supabase = getSupabaseClient();
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+    const res = await fetch(`/api/admin-search-members?q=${encodeURIComponent(q)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const body = await res.json();
+    setResults(body.results ?? []);
+    setSearched(true);
+    setSearching(false);
+  }
 
   async function resetPassword(member) {
     setError("");
@@ -65,19 +65,39 @@ export default function MemberPasswordReset({ adminId }) {
         password.
       </p>
 
-      <input
-        className="circuit-card px-3 py-2 text-sm outline-none"
-        placeholder="Search by email..."
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setSelected(null);
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          runSearch();
         }}
-      />
+        className="flex gap-2"
+      >
+        <input
+          className="circuit-card flex-1 px-3 py-2 text-sm outline-none"
+          placeholder="Search by email..."
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setSelected(null);
+            setSearched(false);
+          }}
+        />
+        <button
+          type="submit"
+          disabled={query.trim().length < 2 || searching}
+          className="push-btn primary rounded-lg px-4 py-2 text-sm font-medium"
+        >
+          {searching ? "Searching..." : "Search"}
+        </button>
+      </form>
 
-      {!selected && (
+      {!selected && searched && results.length === 0 && (
+        <p className="text-sm text-muted">No members match that email.</p>
+      )}
+
+      {!selected && results.length > 0 && (
         <div className="flex flex-col gap-2">
-          {(query.trim().length >= 2 ? results : []).map((m) => (
+          {results.map((m) => (
             <button
               key={m.id}
               onClick={() => setSelected(m)}

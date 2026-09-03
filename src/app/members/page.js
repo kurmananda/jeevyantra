@@ -55,6 +55,7 @@ function MemberDetailModal({ member, onClose }) {
 
         {member.bio && <p className="mb-3 text-sm text-muted">{member.bio}</p>}
         <div className="mb-3 grid grid-cols-2 gap-2 text-xs text-muted sm:grid-cols-3">
+          <span>Email: {member.email || "—"}</span>
           <span>Phone: {member.phone || "—"}</span>
           <span>SC code: {member.sccode || "—"}</span>
         </div>
@@ -124,6 +125,7 @@ function MemberCard({ member, onOpen }) {
         </div>
         <div>
           <p className="font-semibold">{member.name}</p>
+          {member.email && <p className="text-xs text-muted">{member.email}</p>}
           <p className="text-xs text-muted">
             {member.projects?.length ?? 0} {member.projects?.length === 1 ? "project" : "projects"}
             {" · "}
@@ -187,7 +189,13 @@ function MembersPage() {
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
-    return (members ?? []).filter((m) => !q || m.name?.toLowerCase().includes(q) || m.sccode?.toLowerCase().includes(q));
+    return (members ?? []).filter(
+      (m) =>
+        !q ||
+        m.name?.toLowerCase().includes(q) ||
+        m.sccode?.toLowerCase().includes(q) ||
+        m.email?.toLowerCase().includes(q)
+    );
   }, [members, query]);
 
   return (
@@ -202,7 +210,7 @@ function MembersPage() {
         </Link>
       </div>
 
-      <SearchBar value={query} onChange={setQuery} placeholder="Search members by name or SC code..." />
+      <SearchBar value={query} onChange={setQuery} placeholder="Search members by name, email, or SC code..." />
 
       {members === null ? (
         <Servo label="Loading members" />
