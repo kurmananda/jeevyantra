@@ -14,13 +14,17 @@ export default function InventoryManager({ adminId }) {
   const [editingId, setEditingId] = useState(null);
   const [editDraft, setEditDraft] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [error, setError] = useState(null);
 
   function load() {
     getSupabaseClient()
       .from("inventory_items")
       .select("*")
       .order("name")
-      .then(({ data }) => setItems(data ?? []));
+      .then(({ data, error }) => {
+        if (error) setError(`Could not load inventory: ${error.message}`);
+        setItems(data ?? []);
+      });
   }
 
   useEffect(() => {
@@ -30,6 +34,7 @@ export default function InventoryManager({ adminId }) {
   async function addItem(e) {
     e.preventDefault();
     setSaving(true);
+    setError(null);
     const supabase = getSupabaseClient();
     const qty = Number(form.quantity) || 1;
     const name = form.name.trim();
@@ -47,7 +52,8 @@ export default function InventoryManager({ adminId }) {
         .select()
         .single();
       setSaving(false);
-      if (!error) {
+      if (error) setError(`Could not restock item: ${error.message}`);
+      else {
         setItems((i) => i.map((x) => (x.id === existing.id ? data : x)));
         setForm(EMPTY);
         await logActivity(supabase, adminId, "inventory item restocked", `${data.name} +${qty} (now ${data.quantity})`);
@@ -55,13 +61,15 @@ export default function InventoryManager({ adminId }) {
       return;
     }
 
+    const { link, ...rest } = form;
     const { data, error } = await supabase
       .from("inventory_items")
-      .insert({ ...form, name, quantity: qty, available_quantity: qty })
+      .insert({ ...rest, ...(link.trim() ? { link: link.trim() } : {}), name, quantity: qty, available_quantity: qty })
       .select()
       .single();
     setSaving(false);
-    if (!error) {
+    if (error) setError(`Could not add item: ${error.message}`);
+    else {
       setItems((i) => [...i, data].sort((a, b) => a.name.localeCompare(b.name)));
       setForm(EMPTY);
       await logActivity(supabase, adminId, "inventory item added", `${data.name} × ${qty}`);
@@ -99,10 +107,11 @@ export default function InventoryManager({ adminId }) {
       name: editDraft.name.trim(),
       category: editDraft.category.trim() || null,
       description: editDraft.description.trim() || null,
-      link: editDraft.link.trim() || null,
       quantity: Math.max(0, Number(editDraft.quantity) || 0),
       available_quantity: Math.max(0, Number(editDraft.available_quantity) || 0),
     };
+    const newLink = editDraft.link.trim() || null;
+    if (newLink !== (item.link ?? null)) payload.link = newLink;
     const { data, error } = await supabase
       .from("inventory_items")
       .update(payload)
@@ -123,6 +132,7 @@ export default function InventoryManager({ adminId }) {
         Adding an item with a name that already exists restocks it — quantity gets added to the existing item
         instead of creating a duplicate.
       </p>
+      {error && <p className="text-xs font-bold text-[var(--led-red,#c00)]">{error}</p>}
       <form onSubmit={addItem} className="grid gap-3 sm:grid-cols-2">
         <input
           className="circuit-card px-3 py-2 text-sm outline-none"

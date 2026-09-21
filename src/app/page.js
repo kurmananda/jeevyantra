@@ -110,7 +110,10 @@ export default function HomePage() {
       .from("projects")
       .select("*, profiles!projects_owner_id_fkey(name)")
       .order("created_at", { ascending: false })
-      .then(({ data }) => setProjects(data ?? []));
+      .then(({ data, error }) => {
+        if (error) console.error("projects:", error.message);
+        setProjects(data ?? []);
+      });
 
     supabase
       .from("app_settings")
